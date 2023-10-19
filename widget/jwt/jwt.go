@@ -1,13 +1,14 @@
-package token
+package jwt
 
 import (
 	"FileServerWeb/config"
+	"errors"
+
 	"github.com/golang-jwt/jwt/v5"
 
 	"strings"
 	"time"
 )
-
 
 type Claims struct {
 	Username string `json:"username"`
@@ -32,6 +33,9 @@ func GenerateToken(username string) (string, error) {
 }
 
 func ParseToken(s string) (*Claims, error) {
+	if s == "" {
+		return nil, errors.New("Not login")
+	}
 	res := strings.Split(s, " ")
 
 	if res[0] != "Bearer" {
@@ -45,6 +49,6 @@ func ParseToken(s string) (*Claims, error) {
 	if claims,ok := t.Claims.(*Claims); ok && t.Valid {
 		return claims, nil
 	} else {
-		return nil,err
+		return nil, err
 	}
 }

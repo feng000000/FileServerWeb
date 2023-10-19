@@ -6,7 +6,7 @@ import (
 
 	"FileServerWeb/config"
 	"FileServerWeb/routers"
-	"FileServerWeb/widget/token"
+	"FileServerWeb/widget/jwt"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 
 	routers.Routers(r)
 
-	s, err := token.GenerateToken("zhangsan")
+	s, err := jwt.GenerateToken("feng")
 	if err != nil {
 		fmt.Println("generate jwt failed, ", err)
 		return
@@ -27,12 +27,13 @@ func main() {
 	fmt.Printf("token: %s\n", s)
 
     // 解析jwt
-	claim, err := token.ParseToken(s)
+	claim, err := jwt.ParseToken(s)
 	if err != nil {
 		fmt.Println("parse jwt failed:", err)
 		return
 	}
 	fmt.Printf("claim: %+v\n", claim)
+	fmt.Println("username: ", claim.Username)
 
 	r.Run()
 }
