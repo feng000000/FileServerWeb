@@ -6,34 +6,38 @@ import (
 
 	"FileServerWeb/config"
 	"FileServerWeb/routers"
-	"FileServerWeb/widget/jwt"
+	// "FileServerWeb/widget/jwt"
 )
 
 func main() {
 	fmt.Println(config.HOME_DIR)
 	fmt.Println(config.FILE_PATH)
 
-	r := gin.Default()
+	var engine = gin.Default()
 
-	r.Static("/static", "static")
+	engine.Static("/static", "static")
 
-	routers.Routers(r)
+	engine.SetTrustedProxies(nil)
 
-	s, err := jwt.GenerateToken("feng")
-	if err != nil {
-		fmt.Println("generate jwt failed, ", err)
-		return
-	}
-	fmt.Printf("token: %s\n", s)
+	routers.Routers(engine)
 
-    // 解析jwt
-	claim, err := jwt.ParseToken(s)
-	if err != nil {
-		fmt.Println("parse jwt failed:", err)
-		return
-	}
-	fmt.Printf("claim: %+v\n", claim)
-	fmt.Println("username: ", claim.Username)
+	// var s string
+	// s, err = jwt.GenerateToken("feng")
+	// if err != nil {
+	// 	fmt.Println("generate jwt failed, ", err)
+	// 	return
+	// }
+	// fmt.Printf("token: %s\n", s)
 
-	r.Run()
+    // // 解析jwt
+	// var claim *jwt.Claims
+	// claim, err = jwt.ParseToken(s)
+	// if err != nil {
+	// 	fmt.Println("parse jwt failed:", err)
+	// 	return
+	// }
+	// fmt.Printf("claim: %+v\n", claim)
+	// fmt.Println("username: ", claim.Username)
+
+	engine.Run("127.0.0.1:8080")
 }

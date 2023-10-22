@@ -8,9 +8,9 @@ import (
 	"FileServerWeb/views/auth"
 )
 
-func Routers(r *gin.Engine) {
-	r.GET("/ping", views.Ping)
+func Routers(engine *gin.Engine) {
+	engine.GET("/ping", views.Ping)
 
-	r.POST("/upload", views.Upload)
-	r.POST("/login", auth.Login)
+	engine.POST("/upload", views.Upload)
+	engine.POST("/login", auth.Login)
 }

@@ -17,11 +17,11 @@ func Ping(c *gin.Context) {
 }
 
 func Upload(c *gin.Context) {
-	file, _ := c.FormFile("fuckgolang")
+	var file, _ = c.FormFile("fuckgolang")
 
 	fmt.Println(file.Filename)
 
-	dst := filepath.Join(config.FILE_PATH, file.Filename)
+	var dst = filepath.Join(config.FILE_PATH, file.Filename)
 	// 上传文件至指定的完整文件路径
 	c.SaveUploadedFile(file, dst)
 

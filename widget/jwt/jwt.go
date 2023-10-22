@@ -16,8 +16,8 @@ type Claims struct {
 }
 
 func GenerateToken(username string) (string, error) {
-	current := time.Now()
-	claim := Claims{
+	var current = time.Now()
+	var claim = Claims{
 		username,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(current.Add(3 * time.Hour)), // 过期时间3小时
@@ -26,8 +26,8 @@ func GenerateToken(username string) (string, error) {
 		},
 	}
 
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
-	s, err := t.SignedString(config.SECRET_KEY)
+	var t = jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
+	var s, err = t.SignedString(config.SECRET_KEY)
 
 	return "Bearer " + s, err
 }
@@ -36,17 +36,21 @@ func ParseToken(s string) (*Claims, error) {
 	if s == "" {
 		return nil, errors.New("Not login")
 	}
-	res := strings.Split(s, " ")
+	var res = strings.Split(s, " ")
 
 	if res[0] != "Bearer" {
-		return nil, nil
+		return nil, errors.New("Wrong format")
 	}
 
-	t, err := jwt.ParseWithClaims(res[1], &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(config.SECRET_KEY), nil
+	var t, err = jwt.ParseWithClaims(
+		res[1],
+		&Claims{},
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(config.SECRET_KEY), nil
 	})
 
-	if claims,ok := t.Claims.(*Claims); ok && t.Valid {
+	var claims, ok = t.Claims.(*Claims)
+	if ok && t.Valid {
 		return claims, nil
 	} else {
 		return nil, err

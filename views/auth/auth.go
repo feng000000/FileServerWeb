@@ -1,37 +1,65 @@
 package auth
 
 import (
+	// "log"
 	// "fmt"
-	"FileServerWeb/widget/jwt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"FileServerWeb/db"
+	"FileServerWeb/widget/jwt"
+	r "FileServerWeb/widget/response"
 )
 
+var DB = db.DB
+
+var query_user, err = DB.Preparex(`select * from users where username=? and password=?`)
+
 func Login(c *gin.Context) {
-	token := c.GetHeader("Authorization")
-	res, err := jwt.ParseToken(token)
-	username := (*res).Username
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Not login",
-		})
+	var err error
+	var username string
+	var password string
+	var token = c.GetHeader("Authorization")
+
+	if token != "" {
+		_, err = jwt.ParseToken(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, r.StatusUnauthorized(r.Json{
+				"message": "Invalid token",
+			}))
+			return
+		}
+		c.JSON(http.StatusOK, r.Success(nil))
 		return
 	}
-	json := make(map[string]interface{})
+
+	var json = make(map[string]interface{})
 	c.BindJSON(&json)
 
-	// password := json["password"]
+	username = json["username"].(string)
+	password = json["password"].(string)
 
-	ret_token, err := jwt.GenerateToken(username)
+	var user db.UsersTable
+	err = query_user.Get(&user, username, password)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, r.StatusUnauthorized(r.Json{
+			"message": "Wrong username or password",
+		}))
+		return
+	}
+
+	var ret_token string
+	ret_token, err = jwt.GenerateToken(username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "InternalServerError",
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"message" : "Success",
+	c.JSON(http.StatusOK, r.Success(r.Json{
 		"token" : ret_token,
-	})
+	}))
+	return
 }
