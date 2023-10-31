@@ -8,11 +8,9 @@ import (
 	"net/http"
 	"os"
     "strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 
 	"FileServerWeb/db"
 	"FileServerWeb/widget/jwt"
@@ -106,13 +104,12 @@ func Register(c *gin.Context) {
 	file, err = os.OpenFile(code_file_path, os.O_RDWR|os.O_CREATE, 0666)
     defer file.Close()
     if err != nil {
-		log.Println("[ERROR]:", err.Error())
+		log.Println("[ERROR]: file open failed")
     }
     defer file.Close()
 
 	var scanner = bufio.NewScanner(file)
 	for scanner.Scan() {
-		println(scanner.Text())
 		var scan_code = strings.Split(scanner.Text(), " ")[0]
 		var state = strings.Split(scanner.Text(), " ")[1]
 		if state == "0" {
@@ -128,14 +125,30 @@ func Register(c *gin.Context) {
 
 	var t bool
 	t, ok = codes[code]
-	println("t", t)
-	println("ok", ok)
-	for k, v := range codes {
-		println(k)
-		println(v)
-	}
 	if !ok || t != false {
 		c.JSON(http.StatusBadRequest, r.BadRequest(r.Json{"message": "Invalid activation code"}))
+		return
+	}
+
+	result := DB.Where("Username = ?", username).Find(&db.User{})
+	if result.RowsAffected > 0 {
+		c.JSON(http.StatusBadRequest, r.BadRequest(r.Json{"message": "Register failed"}))
+		return
+	}
+
+	var user = db.User{
+		UUID: uuid.NewString(),
+		Username: username,
+		Password: password,
+	}
+	DB.Create(&user)
+
+	var ret_token string
+	ret_token, err = jwt.GenerateToken(username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "InternalServerError",
+		})
 		return
 	}
 
@@ -151,20 +164,6 @@ func Register(c *gin.Context) {
 		}
 	}
 
-	result := DB.Where("Username = ?", "username").Find(&db.User{})
-	if result.Error != gorm.ErrRecordNotFound {
-		c.JSON(http.StatusBadRequest, r.BadRequest(r.Json{"message": "Register failed"}))
-		return
-	}
-
-	var user = db.User{
-		UUID: uuid.NewString(),
-		Username: username,
-		Password: password,
-		Created: time.Now(),
-	}
-	DB.Create(&user)
-
-	c.JSON(http.StatusOK, r.Success(nil))
+	c.JSON(http.StatusOK, r.Success(r.Json{"token": ret_token}))
 	return
 }

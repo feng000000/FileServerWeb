@@ -13,7 +13,8 @@ func Routers(engine *gin.Engine) {
 
 	engine.POST("/upload", views.Upload)
 
-
-	engine.POST("/login", auth.Login)
-	engine.POST("/register", auth.Register)
+	// auth
+	auth_group := engine.Group("/auth")
+	auth_group.POST("/login", auth.Login)
+	auth_group.POST("/register", auth.Register)
 }

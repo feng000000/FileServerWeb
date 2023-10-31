@@ -24,8 +24,8 @@ type User struct {
 	Username	string
 	Password	string
 	Email		string
-	Created    	time.Time
-	LastLogin	time.Time
+	Created    	time.Time `gorm:"autoCreateTime"`
+	LastLogin	time.Time `gorm:"autoCreateTime"`
 }
 
 
