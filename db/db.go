@@ -1,55 +1,50 @@
 package db
 
 import (
+	"fmt"
 	"log"
-	"database/sql"
-    "github.com/jmoiron/sqlx"
-
-	"github.com/go-sql-driver/mysql"
+	"time"
 
 	"FileServerWeb/config"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 
-var DB *sqlx.DB
+var DB *gorm.DB
 
-
-type UsersTable struct {
-	Username 	string
-	Password 	string
-	Email 		sql.NullString
+type Model struct {
+	ID uint `gorm:"primaryKey"`
 }
 
-
-func createTables() {
-	var err error
-
-	// TODO: 反射获取结构体的字段名, 然后创建数据库
-	_, err = DB.Exec("create table if not exists users (username varchar(64), password varchar(64), email varchar(64));")
-	if err != nil {
-		log.Fatal(err)
-	}
+type User struct {
+	Model
+	UUID 		string
+	Username	string
+	Password	string
+	Email		string
+	Created    	time.Time
+	LastLogin	time.Time
 }
 
 
 func init() {
-	var cfg = mysql.Config{
-		User:   config.DB_USERNAME,
-		Passwd: config.DB_PASSWORD,
-		Net:    "tcp",
-		Addr:   config.DB_ADDR,
-		DBName: config.DB_NAME,
-        AllowNativePasswords: true,
-	}
 
+	dsn := fmt.Sprintf(
+		"%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		config.DB_USERNAME,
+		config.DB_PASSWORD,
+		config.DB_ADDR,
+		config.DB_NAME,
+	)
 	var err error
-	DB, err = sqlx.Open("mysql", cfg.FormatDSN())
-
-	err = DB.Ping()
-
+	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	createTables()
+	DB.AutoMigrate(
+		&User{},
+	)
 }

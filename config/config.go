@@ -7,17 +7,13 @@ import (
 )
 
 var (
-	config, err = toml.LoadFile("./config.toml")
-
-
-	HOME_DIR = config.Get("HOME_DIR").(string)
-	FILE_PATH = config.Get("FILE.FILE_PATH").(string)
-	SECRET_KEY = []byte(config.Get("SECRET_KEY").(string))
-
-	DB_USERNAME = config.Get("DATABASE.USERNAME").(string)
-	DB_PASSWORD = config.Get("DATABASE.PASSWORD").(string)
-	DB_ADDR = config.Get("DATABASE.ADDR").(string)
-	DB_NAME = config.Get("DATABASE.DB_NAME").(string)
+	HOME_DIR	string
+	FILE_PATH	string
+	SECRET_KEY	[]byte
+	DB_USERNAME	string
+	DB_PASSWORD	string
+	DB_ADDR		string
+	DB_NAME		string
 )
 
 func init(){
@@ -29,5 +25,13 @@ func init(){
 		log.Fatal(err)
 	}
 
-	HOME_DIR = config.Get("HOME_DIR").(string)
+
+	HOME_DIR 	= config.Get("HOME_DIR").(string)
+	FILE_PATH  	= config.Get("FILE.FILE_PATH").(string)
+	SECRET_KEY 	= []byte(config.Get("SECRET_KEY").(string))
+
+	DB_USERNAME	= config.Get("DATABASE.USERNAME").(string)
+	DB_PASSWORD = config.Get("DATABASE.PASSWORD").(string)
+	DB_ADDR 	= config.Get("DATABASE.ADDR").(string)
+	DB_NAME 	= config.Get("DATABASE.DB_NAME").(string)
 }

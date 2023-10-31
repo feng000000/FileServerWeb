@@ -1,4 +1,23 @@
+// 用法
+// var s string
+// s, err = jwt.GenerateToken("feng")
+// if err != nil {
+// 	fmt.Println("generate jwt failed, ", err)
+// 	return
+// }
+// fmt.Printf("token: %s\n", s)
+
+// // 解析jwt
+// var claim *jwt.Claims
+// claim, err = jwt.ParseToken(s)
+// if err != nil {
+// 	fmt.Println("parse jwt failed:", err)
+// 	return
+// }
+// fmt.Printf("claim: %+v\n", claim)
+// fmt.Println("username: ", claim.Username)
 package jwt
+
 
 import (
 	"FileServerWeb/config"
@@ -14,6 +33,7 @@ type Claims struct {
 	Username string `json:"username"`
 	jwt.RegisteredClaims  // v5版本新加的方法
 }
+
 
 func GenerateToken(username string) (string, error) {
 	var current = time.Now()

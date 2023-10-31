@@ -12,5 +12,8 @@ func Routers(engine *gin.Engine) {
 	engine.GET("/ping", views.Ping)
 
 	engine.POST("/upload", views.Upload)
+
+
 	engine.POST("/login", auth.Login)
+	engine.POST("/register", auth.Register)
 }

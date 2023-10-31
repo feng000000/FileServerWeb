@@ -21,23 +21,5 @@ func main() {
 
 	routers.Routers(engine)
 
-	// var s string
-	// s, err = jwt.GenerateToken("feng")
-	// if err != nil {
-	// 	fmt.Println("generate jwt failed, ", err)
-	// 	return
-	// }
-	// fmt.Printf("token: %s\n", s)
-
-    // // 解析jwt
-	// var claim *jwt.Claims
-	// claim, err = jwt.ParseToken(s)
-	// if err != nil {
-	// 	fmt.Println("parse jwt failed:", err)
-	// 	return
-	// }
-	// fmt.Printf("claim: %+v\n", claim)
-	// fmt.Println("username: ", claim.Username)
-
 	engine.Run("127.0.0.1:8080")
 }

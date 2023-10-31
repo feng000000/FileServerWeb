@@ -40,10 +40,23 @@ func InternalServerError(data map[string]interface{}) gin.H {
 }
 
 
-func StatusUnauthorized(data map[string]interface{}) gin.H {
+func Unauthorized(data map[string]interface{}) gin.H {
 	var ret = gin.H{
 		"code" : 401,
-		"message" : "StatusUnauthorized",
+		"message" : "Unauthorized",
+	}
+
+	for k, v := range data {
+		ret[k] = v
+	}
+
+	return ret
+}
+
+func BadRequest(data map[string]interface{}) gin.H {
+	var ret = gin.H{
+		"code" : 400,
+		"message" : "BadRequest",
 	}
 
 	for k, v := range data {
