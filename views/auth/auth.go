@@ -1,10 +1,8 @@
 package auth
 
 import (
-	// "log"
 	// "fmt"
 	"bufio"
-	"log"
 	"net/http"
 	"os"
     "strings"
@@ -14,7 +12,8 @@ import (
 
 	"FileServerWeb/db"
 	"FileServerWeb/widget/jwt"
-	r "FileServerWeb/widget/response"
+	L "FileServerWeb/widget/logger"
+	R "FileServerWeb/widget/response"
 )
 
 
@@ -29,7 +28,7 @@ func Login(c *gin.Context) {
 	if token != "" {
 		_, err = jwt.ParseToken(token)
 		if err == nil {
-			c.JSON(http.StatusOK, r.Success(nil))
+			c.JSON(http.StatusOK, R.Success(nil))
 			return
 		}
 	}
@@ -40,18 +39,18 @@ func Login(c *gin.Context) {
 	var ok bool
 
 	if username, ok = json["username"].(string); !ok {
-		c.JSON(http.StatusBadRequest, r.BadRequest(nil))
+		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
 		return
 	}
 	if password, ok = json["password"].(string); !ok {
-		c.JSON(http.StatusBadRequest, r.BadRequest(nil))
+		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
 		return
 	}
 
 	var user = db.User{Username: username, Password: password}
 	err = DB.Where("username=? and password=?",username,password).Take(&user).Error
 	if err != nil {
-		c.JSON(http.StatusBadRequest, r.BadRequest(r.Json{
+		c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{
 			"message": "Wrong username or password",
 		}))
 		return
@@ -65,7 +64,7 @@ func Login(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusOK, r.Success(r.Json{
+	c.JSON(http.StatusOK, R.Success(R.Json{
 		"token" : ret_token,
 	}))
 	return
@@ -86,15 +85,15 @@ func Register(c *gin.Context) {
 
 	// 参数判断
 	if username, ok = json["username"].(string); !ok {
-		c.JSON(http.StatusBadRequest, r.BadRequest(nil))
+		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
 		return
 	}
 	if password, ok = json["password"].(string); !ok {
-		c.JSON(http.StatusBadRequest, r.BadRequest(nil))
+		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
 		return
 	}
 	if code, ok = json["code"].(string); !ok {
-		c.JSON(http.StatusBadRequest, r.BadRequest(nil))
+		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
 		return
 	}
 
@@ -104,7 +103,7 @@ func Register(c *gin.Context) {
 	file, err = os.OpenFile(code_file_path, os.O_RDWR|os.O_CREATE, 0666)
     defer file.Close()
     if err != nil {
-		log.Println("[ERROR]: file open failed")
+		L.Logger.Error("file open failed")
     }
     defer file.Close()
 
@@ -120,24 +119,25 @@ func Register(c *gin.Context) {
     }
 	err = scanner.Err()
     if err != nil {
-        log.Println("[ERROR]:", err)
+		L.Logger.Error(err.Error())
     }
 
 	var t bool
 	t, ok = codes[code]
 	if !ok || t != false {
-		c.JSON(http.StatusBadRequest, r.BadRequest(r.Json{"message": "Invalid activation code"}))
+		c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message": "Invalid activation code"}))
 		return
 	}
 
 	result := DB.Where("Username = ?", username).Find(&db.User{})
 	if result.RowsAffected > 0 {
-		c.JSON(http.StatusBadRequest, r.BadRequest(r.Json{"message": "Register failed"}))
+		c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message": "Register failed"}))
 		return
 	}
 
 	var user = db.User{
 		UUID: uuid.NewString(),
+		Level: 5,
 		Username: username,
 		Password: password,
 	}
@@ -158,12 +158,12 @@ func Register(c *gin.Context) {
 	codes[code] = true
 	for k, v := range codes {
 		if v {
-			file.WriteString(k + " 1")
+			file.WriteString(k + " 1\n")
 		} else {
-			file.WriteString(k + " 0")
+			file.WriteString(k + " 0\n")
 		}
 	}
 
-	c.JSON(http.StatusOK, r.Success(r.Json{"token": ret_token}))
+	c.JSON(http.StatusOK, R.Success(R.Json{"token": ret_token}))
 	return
 }

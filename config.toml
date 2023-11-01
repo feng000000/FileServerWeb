@@ -1,11 +1,12 @@
-HOME_DIR = "/home/feng/Code/GoCode/FileServerWeb"
-SECRET_KEY = "e241a376084820e4e7787c8a95df3754094b8f0d4e67b4d20d359dca2182edca"
+HOME_DIR    = "/home/feng/Code/GoCode/FileServerWeb"
+SECRET_KEY  = "e241a376084820e4e7787c8a95df3754094b8f0d4e67b4d20d359dca2182edca"
 
 [DATABASE]
-USERNAME = "root"
-PASSWORD = "123456"
-ADDR = "127.0.0.1:3306"
-DB_NAME = "fileserver"
+USERNAME    = "root"
+PASSWORD    = "123456"
+ADDR        = "127.0.0.1:3306"
+DB_NAME     = "fileserver"
 
 [FILE]
-FILE_PATH = "/home/feng/Code/GoCode/FileServerWeb/data"
+LOG_FILE_PATH   = "server.log"
+DATA_FILE_PATH  = "/home/feng/Code/GoCode/FileServerWeb/data"

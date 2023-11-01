@@ -1,17 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 
-	"FileServerWeb/config"
 	"FileServerWeb/routers"
-	// "FileServerWeb/widget/jwt"
+	"FileServerWeb/widget/logger"
 )
 
 func main() {
-	fmt.Println(config.HOME_DIR)
-	fmt.Println(config.FILE_PATH)
+	defer logger.Logger.Sync()
 
 	var engine = gin.Default()
 
@@ -22,4 +19,5 @@ func main() {
 	routers.Routers(engine)
 
 	engine.Run("127.0.0.1:8080")
+
 }
