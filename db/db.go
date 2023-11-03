@@ -22,6 +22,7 @@ type User struct {
 	Model
 	UUID 		string
 	Level		int8
+	Banned		bool
 	Username	string
 	Password	string
 	Email		string

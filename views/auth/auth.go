@@ -21,8 +21,6 @@ var DB = db.DB
 
 func Login(c *gin.Context) {
 	var err error
-	var username string
-	var password string
 	var token = c.GetHeader("Authorization")
 
 	if token != "" {
@@ -33,22 +31,25 @@ func Login(c *gin.Context) {
 		}
 	}
 
-	var json = make(map[string]interface{})
-	c.BindJSON(&json)
-
-	var ok bool
-
-	if username, ok = json["username"].(string); !ok {
-		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
-		return
+	type LoginParams struct {
+		Username	string `json:"username" binding:"required"`
+		Password	string `json:"password" binding:"required"`
 	}
-	if password, ok = json["password"].(string); !ok {
+	var param LoginParams
+	if c.ShouldBind(&param) != nil {
 		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
 		return
 	}
 
-	var user = db.User{Username: username, Password: password}
-	err = DB.Where("username=? and password=?",username,password).Take(&user).Error
+	var user = db.User{
+		Username: param.Username,
+		Password: param.Password,
+	}
+	err = DB.Where(
+		"username=? and password=?",
+		param.Username,
+		param.Password,
+	).Take(&user).Error
 	if err != nil {
 		c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{
 			"message": "Wrong username or password",
@@ -57,7 +58,7 @@ func Login(c *gin.Context) {
 	}
 
 	var ret_token string
-	ret_token, err = jwt.GenerateToken(username)
+	ret_token, err = jwt.GenerateToken(param.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "InternalServerError",
@@ -73,26 +74,16 @@ func Login(c *gin.Context) {
 
 func Register(c *gin.Context) {
 	var err error
-	var username 	string
-	var password 	string
-	var code 	 	string
 	var code_file_path = "./activation_code.txt"
 
-	var json = make(map[string]interface{})
-	c.BindJSON(&json)
-
-	var ok bool
-
 	// 参数判断
-	if username, ok = json["username"].(string); !ok {
-		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
-		return
+	type  RegisterParams struct {
+		Username	string `json:"username" binding:"required"`
+		Password	string `json:"password" binding:"required"`
+		Code		string `json:"code" binding:"required"`
 	}
-	if password, ok = json["password"].(string); !ok {
-		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
-		return
-	}
-	if code, ok = json["code"].(string); !ok {
+	var param RegisterParams
+	if c.ShouldBind(&param) != nil {
 		c.JSON(http.StatusBadRequest, R.BadRequest(nil))
 		return
 	}
@@ -122,14 +113,17 @@ func Register(c *gin.Context) {
 		L.Logger.Error(err.Error())
     }
 
-	var t bool
-	t, ok = codes[code]
-	if !ok || t != false {
-		c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message": "Invalid activation code"}))
-		return
+	{
+		var t bool
+		var ok bool
+		t, ok = codes[param.Code]
+		if !ok || t != false {
+			c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message": "Invalid activation code"}))
+			return
+		}
 	}
 
-	result := DB.Where("Username = ?", username).Find(&db.User{})
+	result := DB.Where("Username = ?", param.Username).Find(&db.User{})
 	if result.RowsAffected > 0 {
 		c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message": "Register failed"}))
 		return
@@ -138,13 +132,14 @@ func Register(c *gin.Context) {
 	var user = db.User{
 		UUID: uuid.NewString(),
 		Level: 5,
-		Username: username,
-		Password: password,
+		Banned: false,
+		Username: param.Username,
+		Password: param.Password,
 	}
 	DB.Create(&user)
 
 	var ret_token string
-	ret_token, err = jwt.GenerateToken(username)
+	ret_token, err = jwt.GenerateToken(param.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "InternalServerError",
@@ -155,7 +150,7 @@ func Register(c *gin.Context) {
 	file.Close()
 	file, err = os.OpenFile(code_file_path, os.O_WRONLY|os.O_TRUNC, 0666)
 	defer file.Close()
-	codes[code] = true
+	codes[param.Code] = true
 	for k, v := range codes {
 		if v {
 			file.WriteString(k + " 1\n")
