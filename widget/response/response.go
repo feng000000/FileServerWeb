@@ -1,67 +1,93 @@
 package response
 
 import (
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
 type Json map[string]interface{}
 
 type Response struct {
-	code int
-	message string
+    code int
+    message string
 }
 
 
 func Success(data map[string]interface{}) gin.H {
-	var ret = gin.H{
-		"code" : 200,
-		"message" : "Success",
-	}
+    var ret = gin.H{
+        "code" : 200,
+        "message" : "Success",
+    }
 
-	for k, v := range data {
-		ret[k] = v
-	}
+    for k, v := range data {
+        ret[k] = v
+    }
 
-	return ret
+    return ret
 }
 
 
 func InternalServerError(data map[string]interface{}) gin.H {
-	var ret = gin.H{
-		"code" : 500,
-		"message" : "InternalServerError",
-	}
+    var ret = gin.H{
+        "code" : 500,
+        "message" : "InternalServerError",
+    }
 
-	for k, v := range data {
-		ret[k] = v
-	}
+    for k, v := range data {
+        ret[k] = v
+    }
 
-	return ret
+    return ret
 }
 
 
 func Unauthorized(data map[string]interface{}) gin.H {
-	var ret = gin.H{
-		"code" : 401,
-		"message" : "Unauthorized",
-	}
+    var ret = gin.H{
+        "code" : 401,
+        "message" : "Unauthorized",
+    }
 
-	for k, v := range data {
-		ret[k] = v
-	}
+    for k, v := range data {
+        ret[k] = v
+    }
 
-	return ret
+    return ret
 }
 
 func BadRequest(data map[string]interface{}) gin.H {
-	var ret = gin.H{
-		"code" : 400,
-		"message" : "BadRequest",
-	}
+    var ret = gin.H{
+        "code" : 400,
+        "message" : "BadRequest",
+    }
 
-	for k, v := range data {
-		ret[k] = v
-	}
+    for k, v := range data {
+        ret[k] = v
+    }
 
-	return ret
+    return ret
+}
+
+func Forbidden(data map[string]interface{}) gin.H {
+    var ret = gin.H{
+        "code" : 403,
+        "message" : "Forbidden",
+    }
+
+    for k, v := range data {
+        ret[k] = v
+    }
+
+    return ret
+}
+
+func DatabaseError(data map[string]interface{}) gin.H {
+    var ret = gin.H{
+        "code" : 500,
+        "message" : "DatabaseError",
+    }
+
+    for k, v := range data {
+        ret[k] = v
+    }
+
+    return ret
 }

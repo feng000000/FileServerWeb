@@ -1,9 +1,11 @@
 package logger
 
 import (
-	"os"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+    "os"
+    "go.uber.org/zap"
+    "go.uber.org/zap/zapcore"
+
+    "FileServerWeb/config"
 )
 
 var Logger *zap.Logger
@@ -19,7 +21,7 @@ func init() {
         EncodeCaller: zapcore.ShortCallerEncoder,
     }
 
-    file, err := os.Create("myapp.log")
+    file, err := os.Create(config.LOG_FILE_PATH)
     if err != nil {
         panic(err)
     }

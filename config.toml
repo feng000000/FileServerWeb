@@ -9,4 +9,10 @@ DB_NAME     = "fileserver"
 
 [FILE]
 LOG_FILE_PATH   = "server.log"
-DATA_FILE_PATH  = "/home/feng/Code/GoCode/FileServerWeb/data"
+USER_FILE_PATH  = "/home/feng/Code/GoCode/FileServerWeb/data/user_files"
+
+[EMAIL]
+SMTP_SERVER = "smtp.163.com"
+SMTP_PORT   = 465
+USERNAME    = "flfeng0@163.com"
+PASSWORD    = "FWCFGXHUOVYXGYNV"
