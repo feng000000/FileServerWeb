@@ -12,6 +12,7 @@ var (
     HOME_DIR            string
     USER_FILE_PATH      string
     LOG_FILE_PATH       string
+    CODE_FILE_PATH      string
     SECRET_KEY          []byte
     DB_USERNAME         string
     DB_PASSWORD         string
@@ -38,6 +39,7 @@ func init() {
     // FILE
     USER_FILE_PATH  = parsePath(config.Get("FILE.USER_FILE_PATH").(string))
     LOG_FILE_PATH   = parsePath(config.Get("FILE.LOG_FILE_PATH").(string))
+    CODE_FILE_PATH  = parsePath(config.Get("FILE.CODE_FILE_PATH").(string))
 
     // DB
     DB_USERNAME = config.Get("DATABASE.USERNAME").(string)

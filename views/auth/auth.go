@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"FileServerWeb/db"
+	"FileServerWeb/config"
 	"FileServerWeb/widget/jwt"
 	L "FileServerWeb/widget/logger"
 	R "FileServerWeb/widget/response"
@@ -20,6 +21,75 @@ import (
 
 
 var DB = db.DB
+
+
+func checkActivationCode(code string) (map[string]bool, bool) {
+    var err error
+    var file *os.File
+    var codes = make(map[string]bool)
+
+    file, err = os.OpenFile(
+        config.CODE_FILE_PATH,
+        os.O_RDWR|os.O_CREATE,
+        0666,
+    )
+    defer file.Close()
+    if err != nil {
+        L.Logger.Error("file open failed")
+        return nil, false
+    }
+    defer file.Close()
+
+    var scanner = bufio.NewScanner(file)
+    for scanner.Scan() {
+        var scan_code = strings.Split(scanner.Text(), " ")[0]
+        var state = strings.Split(scanner.Text(), " ")[1]
+        if state == "0" {
+            codes[scan_code] = false
+        } else {
+            codes[scan_code] = true
+        }
+    }
+
+    if scanner.Err() != nil {
+        L.Logger.Error(err.Error())
+        return nil, false
+    }
+
+    var t bool
+    var ok bool
+    t, ok = codes[code]
+    if !ok || t != false {
+        return nil, false
+    }
+    return codes, true
+}
+
+
+func useActivationCode(codes map[string]bool, code string) bool {
+    var err error
+    var w_file *os.File
+    w_file, err = os.OpenFile(
+        config.CODE_FILE_PATH,
+        os.O_WRONLY|os.O_TRUNC,
+        0666,
+    )
+    if err != nil {
+        return false
+    }
+    defer w_file.Close()
+
+    codes[code] = true
+    for k, v := range codes {
+        if v {
+            w_file.WriteString(k + " 1\n")
+        } else {
+            w_file.WriteString(k + " 0\n")
+        }
+    }
+    return true
+}
+
 
 func Login(c *gin.Context) {
     var err error
@@ -46,8 +116,11 @@ func Login(c *gin.Context) {
 
     var user db.User
 
-    result = DB.Where("username=? and password=?", param.Username, param.Password).
-                First(&user)
+    result = DB.Where(
+        "username=? and password=?",
+        param.Username,
+        param.Password,
+    ).First(&user)
 
     if errors.Is(result.Error, gorm.ErrRecordNotFound) {
         c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{
@@ -69,12 +142,9 @@ func Login(c *gin.Context) {
 }
 
 
-// TODO: 优化
 func Register(c *gin.Context) {
     var err error
-    var code_file_path = "./activation_code.txt"
 
-    // 参数判断
     type  RegisterParams struct {
         Username    string `json:"username" binding:"required"`
         Password    string `json:"password" binding:"required"`
@@ -86,46 +156,25 @@ func Register(c *gin.Context) {
         return
     }
 
-    // check activation code
-    var file *os.File
-    var codes = make(map[string]bool)
-    file, err = os.OpenFile(code_file_path, os.O_RDWR|os.O_CREATE, 0666)
-    defer file.Close()
-    if err != nil {
-        L.Logger.Error("file open failed")
-    }
-    defer file.Close()
-
-    var scanner = bufio.NewScanner(file)
-    for scanner.Scan() {
-        var scan_code = strings.Split(scanner.Text(), " ")[0]
-        var state = strings.Split(scanner.Text(), " ")[1]
-        if state == "0" {
-            codes[scan_code] = false
-        } else {
-            codes[scan_code] = true
-        }
-    }
-    err = scanner.Err()
-    if err != nil {
-        L.Logger.Error(err.Error())
-    }
-
-    {
-        var t bool
-        var ok bool
-        t, ok = codes[param.Code]
-        if !ok || t != false {
-            c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message": "Invalid activation code"}))
-            return
-        }
-    }
-
-    result := DB.Where("Username = ?", param.Username).Find(&db.User{})
-    if result.RowsAffected > 0 {
-        c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message": "Register failed"}))
+    // 检查激活码
+    var codes, codeAvailable = checkActivationCode(param.Code)
+    if !codeAvailable {
+        c.JSON(
+            http.StatusBadRequest,
+            R.BadRequest(R.Json{"message":err.Error()}),
+        )
         return
     }
+
+    // // username判重
+    // result := DB.Where("Username = ?", param.Username).Find(&db.User{})
+    // if result.RowsAffected > 0 {
+    //     c.JSON(
+    //         http.StatusBadRequest,
+    //         R.BadRequest(R.Json{"message": "Register failed"}),
+    //     )
+    //     return
+    // }
 
     var user = db.User{
         UUID: uuid.NewString(),
@@ -145,16 +194,13 @@ func Register(c *gin.Context) {
         return
     }
 
-    file.Close()
-    file, err = os.OpenFile(code_file_path, os.O_WRONLY|os.O_TRUNC, 0666)
-    defer file.Close()
-    codes[param.Code] = true
-    for k, v := range codes {
-        if v {
-            file.WriteString(k + " 1\n")
-        } else {
-            file.WriteString(k + " 0\n")
-        }
+    // 更新激活码
+    var use_result = useActivationCode(codes, param.Code)
+    if !use_result {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "Use activation code failed",
+        })
+        return
     }
 
     c.JSON(http.StatusOK, R.Success(R.Json{"token": ret_token}))

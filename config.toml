@@ -8,8 +8,9 @@ ADDR        = "127.0.0.1:3306"
 DB_NAME     = "fileserver"
 
 [FILE]
+CODE_FILE_PATH  = "activation_code.txt"
 LOG_FILE_PATH   = "server.log"
-USER_FILE_PATH  = "/home/feng/Code/GoCode/FileServerWeb/data/user_files"
+USER_FILE_PATH  = "data/user_files"
 
 [EMAIL]
 SMTP_SERVER = "smtp.163.com"
