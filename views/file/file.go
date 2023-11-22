@@ -8,6 +8,7 @@ import (
     "path/filepath"
 
     "github.com/gin-gonic/gin"
+    "gorm.io/gorm"
 
     "FileServerWeb/config"
     "FileServerWeb/db"
@@ -33,6 +34,7 @@ func checkFilename(filename string) (bool, error) {
     }
     return false, nil
 }
+
 
 func getAvailableFilename(filename string) (string, error) {
     var theFileName = filename
@@ -65,36 +67,45 @@ func getAvailableFilename(filename string) (string, error) {
     return theFileName, nil
 }
 
+
 // 获取用户的存储空间
-func getStorgeUsage(username string) (int, error) {
-    // TODO
+func getStorgeUsage(UUID string) (int64, error) {
+    var totalSize int64
+    var files []db.File
 
-    return 0, nil
-}
-
-// 增加存储空间
-func addStorgeUsage(username string, storgeUsege int) error {
-    // TODO
-
-    return nil
-}
-
-func Test(c *gin.Context) {
-    var user db.User
-    var result = DB.Model(&user).Where("Username = ?", "username").First(&user)
+    result := DB.Where("uuid = ?", "UUID").Find(&files)
     if result.Error != nil {
-        println(result.Error.Error())
-        c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
-        return
+        return 0, result.Error
     }
 
-    c.JSON(http.StatusOK, R.Success(nil))
+    for _, file := range files {
+        totalSize += file.Size_KB
+    }
+
+    return totalSize, nil
 }
+
+
+// 获取用户存储最大容量
+func getStorgeLimit(UUID string) (int64, error) {
+    var limit db.LevelStorge
+    // 使用 Joins 连接两个表
+    var result = DB.Joins("JOIN users ON users.level = level_storges.level").
+                    Where("users.uuid = ?", UUID).
+                    First(&limit)
+
+    if result.Error != nil {
+        return 0, result.Error
+    }
+    return limit.StorgeLimit, nil
+}
+
 
 // 表单上传文件, key为 "files"
 func Upload(c *gin.Context) {
     var err error
     var result db.Result
+
     var token = c.GetHeader("Authorization")
     var claims *jwt.Claims
     if token != "" {
@@ -105,7 +116,7 @@ func Upload(c *gin.Context) {
         }
     }
 
-    var username = claims.Username
+    var UUID = claims.UUID
 
     form, err := c.MultipartForm()
     if err != nil {
@@ -119,12 +130,44 @@ func Upload(c *gin.Context) {
     if len(files) == 0 {
         c.JSON(
             http.StatusBadRequest,
-            R.BadRequest(R.Json{"message": "[files] not found"}),
+            R.BadRequest(R.Json{"message": "key [files] not found"}),
         )
         return
     }
 
-    for _, file := range files { // for files
+    // 判断容量是否到达上限
+    var allFileSize int64
+    {
+        var maxStorge int64
+        var currentStorge int64
+
+        maxStorge, err = getStorgeLimit(UUID)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+            return
+        }
+        currentStorge, err = getStorgeUsage(UUID)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+            return
+        }
+
+        for _, file := range files {
+            allFileSize += file.Size / 10
+        }
+
+        // 可超 1G (1*1024*1024 kB)
+        if currentStorge + allFileSize > maxStorge + int64(1 << 20) {
+            c.JSON(
+                http.StatusBadRequest,
+                R.BadRequest(R.Json{"message":"Not enough storage space"}),
+            )
+            return
+        }
+    }
+
+    // 存储文件
+    for _, file := range files {
         // 检查数据库中是否存在文件名
         var theFileName, err = getAvailableFilename(file.Filename)
         if err != nil {
@@ -132,33 +175,11 @@ func Upload(c *gin.Context) {
             return
         }
 
-        // TODO: 判断容量是否到达上限
-        // var maxStorge int
-        // var currentStorge int
-        // var user db.User
-
-        // // TODO: 多表查询获得用户最大容量
-        // result = DB.Model(&User).Where("Username = ?", username).First(&user)
-        // if result.Error != nil {
-        //     c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
-        //     return
-        // }
-
-        // currentStorge, err = getStorgeUsage(username)
-        // if err != nil {
-        //     c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
-        //     return
-        // }
-        // if file.Size / 10 +
-
         // 在数据库中添加记录
-        var user db.User
-        result = DB.Model(&user).Where("Username = ?", username).First(&user)
-        var UUID = user.Username
         var new_file = db.File{
             UUID: UUID,
             Filename: theFileName,
-            Size_kB: int(file.Size / 10),
+            Size_KB: file.Size / 10,
         }
 
         result = DB.Create(&new_file)
@@ -166,14 +187,53 @@ func Upload(c *gin.Context) {
             c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
         }
 
-        var dst = filepath.Join(config.USER_FILE_PATH, username, theFileName)
+        var dst = filepath.Join(config.USER_FILE_PATH, UUID, theFileName)
         go c.SaveUploadedFile(file, dst)
-    } // for files end
+    }
 
     c.JSON(http.StatusOK, R.Success(nil))
 }
 
 
+// 下载文件
 func Download(c *gin.Context) {
+    var err error
+    var result db.Result
 
+    var token = c.GetHeader("Authorization")
+    var claims *jwt.Claims
+    if token != "" {
+        claims, err = jwt.ParseToken(token)
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, R.Unauthorized(nil))
+            return
+        }
+    }
+
+    var UUID = claims.UUID
+
+    type DownloadParams struct {
+        FileName    string `json:"filename" binding:"required"`
+    }
+    var param DownloadParams
+    if c.ShouldBind(&param) != nil {
+        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
+        return
+    }
+
+    var file db.File
+    result = DB.Where("filename = ?", param.FileName).First(&file)
+    if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+        c.JSON(
+            http.StatusBadRequest,
+            R.BadRequest(R.Json{"message":"File dont exists"}),
+        )
+        return
+    } else if result.Error != nil {
+        c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+        return
+    }
+
+    var dst = filepath.Join(config.USER_FILE_PATH, UUID, file.Filename)
+    c.File(dst)
 }

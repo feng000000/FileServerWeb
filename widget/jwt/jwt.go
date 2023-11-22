@@ -30,8 +30,8 @@ import (
 )
 
 type Claims struct {
-    Username string `json:"username"`
-    jwt.RegisteredClaims  // v5版本新加的方法
+    UUID string `json:"uuid"`
+    jwt.RegisteredClaims  // github.com/golang-jwt/jwt/ v5版本新加的方法
 }
 
 
@@ -51,6 +51,7 @@ func GenerateToken(username string) (string, error) {
 
     return "Bearer " + s, err
 }
+
 
 func ParseToken(s string) (*Claims, error) {
     if s == "" {

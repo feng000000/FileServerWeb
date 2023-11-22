@@ -1,19 +1,21 @@
 package auth
 
 import (
-    // "fmt"
-    "bufio"
-    "net/http"
-    "os"
-    "strings"
+	// "fmt"
+	"bufio"
+	"errors"
+	"net/http"
+	"os"
+	"strings"
 
-    "github.com/gin-gonic/gin"
-    "github.com/google/uuid"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 
-    "FileServerWeb/db"
-    "FileServerWeb/widget/jwt"
-    L "FileServerWeb/widget/logger"
-    R "FileServerWeb/widget/response"
+	"FileServerWeb/db"
+	"FileServerWeb/widget/jwt"
+	L "FileServerWeb/widget/logger"
+	R "FileServerWeb/widget/response"
 )
 
 
@@ -21,6 +23,7 @@ var DB = db.DB
 
 func Login(c *gin.Context) {
     var err error
+    var result db.Result
     var token = c.GetHeader("Authorization")
 
     if token != "" {
@@ -41,16 +44,12 @@ func Login(c *gin.Context) {
         return
     }
 
-    var user = db.User{
-        Username: param.Username,
-        Password: param.Password,
-    }
-    err = DB.Where(
-        "username=? and password=?",
-        param.Username,
-        param.Password,
-    ).Take(&user).Error
-    if err != nil {
+    var user db.User
+
+    result = DB.Where("username=? and password=?", param.Username, param.Password).
+                First(&user)
+
+    if errors.Is(result.Error, gorm.ErrRecordNotFound) {
         c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{
             "message": "Wrong username or password",
         }))
@@ -58,11 +57,9 @@ func Login(c *gin.Context) {
     }
 
     var ret_token string
-    ret_token, err = jwt.GenerateToken(param.Username)
+    ret_token, err = jwt.GenerateToken(user.UUID)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{
-            "message": "InternalServerError",
-        })
+        c.JSON(http.StatusInternalServerError, R.InternalServerError(nil))
         return
     }
     c.JSON(http.StatusOK, R.Success(R.Json{
@@ -72,6 +69,7 @@ func Login(c *gin.Context) {
 }
 
 
+// TODO: 优化
 func Register(c *gin.Context) {
     var err error
     var code_file_path = "./activation_code.txt"

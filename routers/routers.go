@@ -17,7 +17,7 @@ func Routers(engine *gin.Engine) {
     // file
     engine.POST("/upload", file.Upload)
     engine.POST("/download", file.Download)
-    engine.GET("/test", file.Test)
+    // engine.GET("/test", file.Test)
 
     // auth
     auth_group := engine.Group("/auth")

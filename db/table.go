@@ -24,13 +24,13 @@ type User struct {
 type File struct {
     Model
     UUID        string      `json:"uuid"`
-    Filename    string      `json:"filename"`
+    Filename    string      `json:"sfilename"`
     Created     time.Time   `json:"created" gorm:"autoCreateTime"`
-    Size_kB     int         `json:"size_kb"`
+    Size_KB     int64       `json:"size_kb"`
 }
 
 type LevelStorge struct {
     Model
     Level       int8        `json:"level"`
-    StorgeLimit int         `json:"storge_limit"` // 单位kB
+    StorgeLimit int64       `json:"storge_limit"` // 单位kB
 }
