@@ -41,7 +41,7 @@ func init() {
         {Level: 0, StorgeLimit: (1 << 30) * 1},     // 管理员, 1TB
         {Level: 1, StorgeLimit: (1 << 30) * 1},     // 荣誉会员, 1TB
         {Level: 2, StorgeLimit: (1 << 20) * 500},   // 会员, 500GB
-        {Level: 5, StorgeLimit: (1 << 20) * 100},   // 普通, 100GB
+        {Level: 5, StorgeLimit: (1 << 20) * 10},   // 普通, 10GB
     }
-    DB.Create(&levelStorges)
+    DB.Save(&levelStorges)
 }

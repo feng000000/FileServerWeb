@@ -9,7 +9,7 @@ DB_NAME     = "fileserver"
 
 [FILE]
 CODE_FILE_PATH  = "activation_code.txt"
-LOG_FILE_PATH   = "server.log"
+LOG_FILE_PATH   = "log/server.log"
 USER_FILE_PATH  = "data/user_files"
 
 [EMAIL]

@@ -237,3 +237,29 @@ func Download(c *gin.Context) {
     var dst = filepath.Join(config.USER_FILE_PATH, UUID, file.Filename)
     c.File(dst)
 }
+
+
+func StorageUsage(c *gin.Context) {
+    var err error
+
+    var token = c.GetHeader("Authorization")
+    var claims *jwt.Claims
+    if token != "" {
+        claims, err = jwt.ParseToken(token)
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, R.Unauthorized(nil))
+            return
+        }
+    }
+
+    var UUID = claims.UUID
+
+    var usage int64
+    usage, err = getStorgeUsage(UUID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+        return
+    }
+
+    c.JSON(http.StatusOK, R.Success(R.Json{"usage":usage}))
+}

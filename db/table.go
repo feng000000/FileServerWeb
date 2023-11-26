@@ -30,7 +30,6 @@ type File struct {
 }
 
 type LevelStorge struct {
-    Model
-    Level       int8        `json:"level"`
+    Level       int8        `json:"level" gorm:"primaryKey;autoIncrement:false"`
     StorgeLimit int64       `json:"storge_limit"` // 单位kB
 }
