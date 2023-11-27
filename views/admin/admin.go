@@ -6,6 +6,12 @@ import (
     "github.com/gin-gonic/gin"
 )
 
-func Users_info(c *gin.Context) {
+
+func UsersInfoHandler(c *gin.Context) {
+    // TODO
+}
+
+
+func BanUserHandler(c *gin.Context) {
     // TODO
 }

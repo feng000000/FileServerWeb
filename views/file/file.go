@@ -12,7 +12,6 @@ import (
 
     "FileServerWeb/config"
     "FileServerWeb/db"
-    "FileServerWeb/widget/jwt"
     L "FileServerWeb/widget/logger"
     R "FileServerWeb/widget/response"
 )
@@ -20,6 +19,148 @@ import (
 
 var DB = db.DB
 
+
+// 表单上传文件, key为 "files"
+func UploadHandler(c *gin.Context) {
+    var err error
+    var result db.Result
+
+    var UUID = c.GetString("UUID")
+
+    println("UUID = ", UUID)
+
+    form, err := c.MultipartForm()
+    if err != nil {
+        L.Logger.Error(err.Error())
+        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
+        return
+    }
+
+    // 获取所有文件
+    files := form.File["files"]
+    if len(files) == 0 {
+        c.JSON(
+            http.StatusBadRequest,
+            R.BadRequest(R.Json{"message": "key [files] not found"}),
+        )
+        return
+    }
+
+    // 判断容量是否到达上限
+    var allFileSize int64
+    {
+        var maxStorge int64
+        var currentStorge int64
+
+        maxStorge, err = getStorgeLimit(UUID)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+            return
+        }
+        currentStorge, err = getStorgeUsage(UUID)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+            return
+        }
+
+        for _, file := range files {
+            allFileSize += file.Size / 10
+        }
+
+        // 可超 1G (1*1024*1024 kB)
+        if currentStorge + allFileSize > maxStorge + int64(1 << 20) {
+            c.JSON(
+                http.StatusBadRequest,
+                R.BadRequest(R.Json{"message":"Not enough storage space"}),
+            )
+            return
+        }
+    }
+
+
+    // 存储文件
+    for _, file := range files {
+        // 检查数据库中是否存在文件名
+        var theFileName, err = getAvailableFilename(file.Filename)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message":err.Error()}))
+            return
+        }
+
+        // 在数据库中添加记录
+        var new_file = db.File{
+            UUID: UUID,
+            Filename: theFileName,
+            Size_KB: file.Size / 10,
+        }
+
+        result = DB.Create(&new_file)
+        if result.Error != nil {
+            c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+        }
+
+        var dst = filepath.Join(config.USER_FILE_PATH, UUID, theFileName)
+
+        // TODO: 压缩后再存储
+        go c.SaveUploadedFile(file, dst)
+    }
+
+    c.JSON(http.StatusOK, R.Success(nil))
+}
+
+
+// 下载文件
+func DownloadHandler(c *gin.Context) {
+    // var err error
+    var result db.Result
+
+    var UUID = c.GetString("UUID")
+
+    type DownloadParams struct {
+        FileName    string `json:"filename" binding:"required"`
+    }
+    var param DownloadParams
+    if c.ShouldBind(&param) != nil {
+        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
+        return
+    }
+
+    var file db.File
+    result = DB.Where("filename = ?", param.FileName).First(&file)
+    if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+        c.JSON(
+            http.StatusBadRequest,
+            R.BadRequest(R.Json{"message":"File dont exists"}),
+        )
+        return
+    } else if result.Error != nil {
+        c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+        return
+    }
+
+    var dst = filepath.Join(config.USER_FILE_PATH, UUID, file.Filename)
+    c.File(dst)
+}
+
+
+// 存储使用量
+func StorageUsageHandler(c *gin.Context) {
+    var err error
+
+    var UUID = c.GetString("UUID")
+
+    var usage int64
+    usage, err = getStorgeUsage(UUID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+        return
+    }
+
+    c.JSON(http.StatusOK, R.Success(R.Json{"usage":usage}))
+}
+
+
+// ---------------- tool func ---------------- //
 
 // 检查数据库中是否存在文件名
 func checkFilename(filename string) (bool, error) {
@@ -98,168 +239,4 @@ func getStorgeLimit(UUID string) (int64, error) {
         return 0, result.Error
     }
     return limit.StorgeLimit, nil
-}
-
-
-// 表单上传文件, key为 "files"
-func Upload(c *gin.Context) {
-    var err error
-    var result db.Result
-
-    var token = c.GetHeader("Authorization")
-    var claims *jwt.Claims
-    if token != "" {
-        claims, err = jwt.ParseToken(token)
-        if err != nil {
-            c.JSON(http.StatusUnauthorized, R.Unauthorized(nil))
-            return
-        }
-    }
-
-    var UUID = claims.UUID
-
-    form, err := c.MultipartForm()
-    if err != nil {
-        L.Logger.Error(err.Error())
-        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
-        return
-    }
-
-    // 获取所有文件
-    files := form.File["files"]
-    if len(files) == 0 {
-        c.JSON(
-            http.StatusBadRequest,
-            R.BadRequest(R.Json{"message": "key [files] not found"}),
-        )
-        return
-    }
-
-    // 判断容量是否到达上限
-    var allFileSize int64
-    {
-        var maxStorge int64
-        var currentStorge int64
-
-        maxStorge, err = getStorgeLimit(UUID)
-        if err != nil {
-            c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
-            return
-        }
-        currentStorge, err = getStorgeUsage(UUID)
-        if err != nil {
-            c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
-            return
-        }
-
-        for _, file := range files {
-            allFileSize += file.Size / 10
-        }
-
-        // 可超 1G (1*1024*1024 kB)
-        if currentStorge + allFileSize > maxStorge + int64(1 << 20) {
-            c.JSON(
-                http.StatusBadRequest,
-                R.BadRequest(R.Json{"message":"Not enough storage space"}),
-            )
-            return
-        }
-    }
-
-    // 存储文件
-    for _, file := range files {
-        // 检查数据库中是否存在文件名
-        var theFileName, err = getAvailableFilename(file.Filename)
-        if err != nil {
-            c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message":err.Error()}))
-            return
-        }
-
-        // 在数据库中添加记录
-        var new_file = db.File{
-            UUID: UUID,
-            Filename: theFileName,
-            Size_KB: file.Size / 10,
-        }
-
-        result = DB.Create(&new_file)
-        if result.Error != nil {
-            c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
-        }
-
-        var dst = filepath.Join(config.USER_FILE_PATH, UUID, theFileName)
-        go c.SaveUploadedFile(file, dst)
-    }
-
-    c.JSON(http.StatusOK, R.Success(nil))
-}
-
-
-// 下载文件
-func Download(c *gin.Context) {
-    var err error
-    var result db.Result
-
-    var token = c.GetHeader("Authorization")
-    var claims *jwt.Claims
-    if token != "" {
-        claims, err = jwt.ParseToken(token)
-        if err != nil {
-            c.JSON(http.StatusUnauthorized, R.Unauthorized(nil))
-            return
-        }
-    }
-
-    var UUID = claims.UUID
-
-    type DownloadParams struct {
-        FileName    string `json:"filename" binding:"required"`
-    }
-    var param DownloadParams
-    if c.ShouldBind(&param) != nil {
-        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
-        return
-    }
-
-    var file db.File
-    result = DB.Where("filename = ?", param.FileName).First(&file)
-    if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-        c.JSON(
-            http.StatusBadRequest,
-            R.BadRequest(R.Json{"message":"File dont exists"}),
-        )
-        return
-    } else if result.Error != nil {
-        c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
-        return
-    }
-
-    var dst = filepath.Join(config.USER_FILE_PATH, UUID, file.Filename)
-    c.File(dst)
-}
-
-
-func StorageUsage(c *gin.Context) {
-    var err error
-
-    var token = c.GetHeader("Authorization")
-    var claims *jwt.Claims
-    if token != "" {
-        claims, err = jwt.ParseToken(token)
-        if err != nil {
-            c.JSON(http.StatusUnauthorized, R.Unauthorized(nil))
-            return
-        }
-    }
-
-    var UUID = claims.UUID
-
-    var usage int64
-    usage, err = getStorgeUsage(UUID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
-        return
-    }
-
-    c.JSON(http.StatusOK, R.Success(R.Json{"usage":usage}))
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 
 	"FileServerWeb/db"
 	"FileServerWeb/config"
@@ -22,6 +21,121 @@ import (
 
 var DB = db.DB
 
+
+func LoginHandler(c *gin.Context) {
+    var err error
+    var result db.Result
+    var token = c.GetHeader("Authorization")
+
+    if token != "" {
+        _, err = jwt.ParseToken(token)
+        if err == nil {
+            c.JSON(http.StatusOK, R.Success(nil))
+            return
+        }
+    }
+
+    type LoginParams struct {
+        Username    string `json:"username" binding:"required"`
+        Password    string `json:"password" binding:"required"`
+    }
+    var param LoginParams
+    if c.ShouldBind(&param) != nil {
+        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
+        return
+    }
+
+    var user db.User
+
+    result = DB.Where(
+        "username=? and password=?",
+        param.Username,
+        param.Password,
+    ).First(&user)
+
+    if errors.Is(result.Error, db.ErrRecordNotFound) {
+        c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{
+            "message": "Wrong username or password",
+        }))
+        return
+    } else if result.Error != nil {
+        L.Logger.Error(result.Error.Error())
+        c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+        return
+    }
+
+    var ret_token string
+    ret_token, err = jwt.GenerateToken(user.UUID)
+    if err != nil {
+        L.Logger.Error(err.Error())
+        c.JSON(http.StatusInternalServerError, R.InternalServerError(nil))
+        return
+    }
+
+    c.JSON(http.StatusOK, R.Success(R.Json{
+        "token" : ret_token,
+    }))
+    return
+}
+
+
+func RegisterHandler(c *gin.Context) {
+    var err error
+
+    type  RegisterParams struct {
+        Username    string `json:"username" binding:"required"`
+        Password    string `json:"password" binding:"required"`
+        Code        string `json:"code" binding:"required"`
+    }
+    var param RegisterParams
+    if c.ShouldBind(&param) != nil {
+        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
+        return
+    }
+
+    // 检查激活码
+    var codes, codeAvailable = checkActivationCode(param.Code)
+    if !codeAvailable {
+        c.JSON(
+            http.StatusBadRequest,
+            R.BadRequest(R.Json{"message":err.Error()}),
+        )
+        return
+    }
+
+    var user = db.User{
+        UUID: uuid.NewString(),
+        Level: 5,
+        Banned: false,
+        Username: param.Username,
+        Password: param.Password,
+    }
+    DB.Create(&user)
+
+    var ret_token string
+    ret_token, err = jwt.GenerateToken(param.Username)
+    if err != nil {
+        L.Logger.Error(err.Error())
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "InternalServerError",
+        })
+        return
+    }
+
+    // 更新激活码
+    var use_result = useActivationCode(codes, param.Code)
+    if !use_result {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "Use activation code failed",
+        })
+        return
+    }
+
+    c.JSON(http.StatusOK, R.Success(R.Json{"token": ret_token}))
+    return
+}
+
+// ---------------- tool func ---------------- //
 
 func checkActivationCode(code string) (map[string]bool, bool) {
     var err error
@@ -75,6 +189,7 @@ func useActivationCode(codes map[string]bool, code string) bool {
         0666,
     )
     if err != nil {
+        L.Logger.Error(err.Error())
         return false
     }
     defer w_file.Close()
@@ -88,121 +203,4 @@ func useActivationCode(codes map[string]bool, code string) bool {
         }
     }
     return true
-}
-
-
-func Login(c *gin.Context) {
-    var err error
-    var result db.Result
-    var token = c.GetHeader("Authorization")
-
-    if token != "" {
-        _, err = jwt.ParseToken(token)
-        if err == nil {
-            c.JSON(http.StatusOK, R.Success(nil))
-            return
-        }
-    }
-
-    type LoginParams struct {
-        Username    string `json:"username" binding:"required"`
-        Password    string `json:"password" binding:"required"`
-    }
-    var param LoginParams
-    if c.ShouldBind(&param) != nil {
-        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
-        return
-    }
-
-    var user db.User
-
-    result = DB.Where(
-        "username=? and password=?",
-        param.Username,
-        param.Password,
-    ).First(&user)
-
-    if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-        c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{
-            "message": "Wrong username or password",
-        }))
-        return
-    }
-
-    var ret_token string
-    ret_token, err = jwt.GenerateToken(user.UUID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, R.InternalServerError(nil))
-        return
-    }
-    c.JSON(http.StatusOK, R.Success(R.Json{
-        "token" : ret_token,
-    }))
-    return
-}
-
-
-func Register(c *gin.Context) {
-    var err error
-
-    type  RegisterParams struct {
-        Username    string `json:"username" binding:"required"`
-        Password    string `json:"password" binding:"required"`
-        Code        string `json:"code" binding:"required"`
-    }
-    var param RegisterParams
-    if c.ShouldBind(&param) != nil {
-        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
-        return
-    }
-
-    // 检查激活码
-    var codes, codeAvailable = checkActivationCode(param.Code)
-    if !codeAvailable {
-        c.JSON(
-            http.StatusBadRequest,
-            R.BadRequest(R.Json{"message":err.Error()}),
-        )
-        return
-    }
-
-    // // username判重
-    // result := DB.Where("Username = ?", param.Username).Find(&db.User{})
-    // if result.RowsAffected > 0 {
-    //     c.JSON(
-    //         http.StatusBadRequest,
-    //         R.BadRequest(R.Json{"message": "Register failed"}),
-    //     )
-    //     return
-    // }
-
-    var user = db.User{
-        UUID: uuid.NewString(),
-        Level: 5,
-        Banned: false,
-        Username: param.Username,
-        Password: param.Password,
-    }
-    DB.Create(&user)
-
-    var ret_token string
-    ret_token, err = jwt.GenerateToken(param.Username)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{
-            "message": "InternalServerError",
-        })
-        return
-    }
-
-    // 更新激活码
-    var use_result = useActivationCode(codes, param.Code)
-    if !use_result {
-        c.JSON(http.StatusInternalServerError, gin.H{
-            "message": "Use activation code failed",
-        })
-        return
-    }
-
-    c.JSON(http.StatusOK, R.Success(R.Json{"token": ret_token}))
-    return
 }

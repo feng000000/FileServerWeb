@@ -4,36 +4,57 @@ import (
     // "fmt"
     "github.com/gin-gonic/gin"
 
+    "FileServerWeb/middleware"
     "FileServerWeb/views"
-    "FileServerWeb/views/auth"
     "FileServerWeb/views/admin"
+    "FileServerWeb/views/auth"
     "FileServerWeb/views/file"
+    "FileServerWeb/views/user"
 )
 
 func Routers(engine *gin.Engine) {
     engine.GET("/ping", views.Ping)
     engine.GET("/ip", views.IP)
 
-    // file
-    file_group := engine.Group("/file")
-    {
-        file_group.POST("/upload", file.Upload)
-        file_group.POST("/download", file.Download)
-        file_group.POST("/storage_usage", file.StorageUsage)
+    // auth
+    var authGroup = engine.Group("/auth")
 
+    {
+        authGroup.POST("/login", auth.LoginHandler)
+        authGroup.POST("/register", auth.RegisterHandler)
     }
 
-    // auth
-    auth_group := engine.Group("/auth")
+    // user
+    var userGroup = engine.Group(
+        "/user",
+        middleware.JWTMiddleware(),
+    )
     {
-        auth_group.POST("/login", auth.Login)
-        auth_group.POST("/register", auth.Register)
+        userGroup.POST("/change_username", user.ChangeUsernameHandler)
+        userGroup.POST("/change_password", user.ChangePasswordHandler)
+    }
+
+    // file
+    var fileGroup = engine.Group(
+        "/file",
+        middleware.JWTMiddleware(),
+    )
+    {
+        fileGroup.GET("/storage_usage", file.StorageUsageHandler)
+
+        fileGroup.POST("/upload", file.UploadHandler)
+        fileGroup.POST("/download", file.DownloadHandler)
+
     }
 
     // admin
-    admin_group := engine.Group("/admin")
+    var adminGroup = engine.Group(
+        "/admin",
+        middleware.JWTMiddleware(),
+    )
     {
-        admin_group.POST("/users_info", admin.Users_info)
+        adminGroup.POST("/users_info", admin.UsersInfoHandler)
+        adminGroup.POST("/ban_user", admin.BanUserHandler)
     }
 
 }

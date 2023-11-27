@@ -11,6 +11,7 @@ import (
 )
 
 var DB *gorm.DB
+var ErrRecordNotFound error
 
 type Result *gorm.DB
 
@@ -28,6 +29,8 @@ func init() {
     if err != nil {
         log.Fatal(err)
     }
+
+    ErrRecordNotFound = gorm.ErrRecordNotFound
 
     // 添加所有的数据库表
     DB.AutoMigrate(
