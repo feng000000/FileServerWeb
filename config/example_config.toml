@@ -1,5 +1,5 @@
-HOME_DIR    = "/home/feng/Code/GoCode/FileServerWeb"
-SECRET_KEY  = "e241a376084820e4e7787c8a95df3754094b8f0d4e67b4d20d359dca2182edca"
+HOME_DIR    = "/path/to/your/project"
+SECRET_KEY  = "yourSecretKey"
 
 [DATABASE]
 USERNAME    = "root"

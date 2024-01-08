@@ -18,7 +18,6 @@ func Routers(engine *gin.Engine) {
 
     // auth
     var authGroup = engine.Group("/auth")
-
     {
         authGroup.POST("/login", auth.LoginHandler)
         authGroup.POST("/register", auth.RegisterHandler)
