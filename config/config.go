@@ -2,7 +2,6 @@ package config
 
 import (
     "log"
-    "os"
 
     "github.com/pelletier/go-toml"
     "path/filepath"
@@ -28,8 +27,7 @@ var (
 func init() {
     var err error
     var config *toml.Tree
-    // config, err = toml.LoadFile("./config/config.toml")
-    config, err = toml.LoadFile(os.Getenv("FILE_SERVER_CONFIG"))
+    config, err = toml.LoadFile("./config.toml")
 
     if err != nil {
         log.Fatal(err)
