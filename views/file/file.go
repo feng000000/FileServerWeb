@@ -6,6 +6,7 @@ import (
     "errors"
     "net/http"
     "path/filepath"
+	"os"
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
@@ -26,8 +27,6 @@ func UploadHandler(c *gin.Context) {
     var result db.Result
 
     var UUID = c.GetString("UUID")
-
-    println("UUID = ", UUID)
 
     form, err := c.MultipartForm()
     if err != nil {
@@ -77,13 +76,13 @@ func UploadHandler(c *gin.Context) {
         }
     }
 
-
     // 存储文件
     for _, file := range files {
         // 检查数据库中是否存在文件名
         var theFileName, err = getAvailableFilename(file.Filename)
         if err != nil {
-            c.JSON(http.StatusBadRequest, R.BadRequest(R.Json{"message":err.Error()}))
+            c.JSON(http.StatusBadRequest,
+                   R.BadRequest(R.Json{"message":err.Error()}))
             return
         }
 
@@ -103,6 +102,34 @@ func UploadHandler(c *gin.Context) {
 
         // TODO: 压缩后再存储
         go c.SaveUploadedFile(file, dst)
+    }
+
+    c.JSON(http.StatusOK, R.Success(nil))
+}
+
+
+// 二进制上传文件, 无法获取文件名
+func UploadBinaryHandler(c *gin.Context) {
+    var err error
+
+    file, err := c.GetRawData()
+    if err != nil {
+        L.Logger.Error(err.Error())
+        c.JSON(http.StatusBadRequest, R.BadRequest(nil))
+        return
+    }
+
+    var f *os.File
+    f, err = os.OpenFile("./test_binary", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    _, err = f.Write(file)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
     }
 
     c.JSON(http.StatusOK, R.Success(nil))
@@ -159,8 +186,6 @@ func StorageUsageHandler(c *gin.Context) {
     c.JSON(http.StatusOK, R.Success(R.Json{"usage":usage}))
 }
 
-
-// ---------------- tool func ---------------- //
 
 // 检查数据库中是否存在文件名
 func checkFilename(filename string) (bool, error) {

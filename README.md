@@ -1,10 +1,11 @@
 # FileServerWeb
 用作文件服务器的管理web
 
-运行前先要设置环境变量 `FILE_SERVER_CONFIG` 为配置文件绝对路径
-例如
+
 ```shell
-export FILE_SERVER_CONFIG="/home/feng/Code/GoCode/FileServerWeb/config/config.toml"
+cd path/to/project
+
+go run .
 ```
 
 ## 功能

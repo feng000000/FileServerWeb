@@ -1,7 +1,7 @@
 package db
 
 import (
-    "time"
+	"time"
 )
 
 
@@ -19,6 +19,12 @@ type User struct {
     Email       string      `json:"email"`
     Created     time.Time   `json:"created" gorm:"autoCreateTime"`
     LastLogin   time.Time   `json:"last_login" gorm:"autoCreateTime"`
+}
+
+type UserSecretKey struct {
+    Model
+    UUID        string      `json:"uuid"`
+    SecretKey   string      `json:"secret_key"`
 }
 
 type File struct {

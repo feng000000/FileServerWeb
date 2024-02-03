@@ -42,6 +42,7 @@ func Routers(engine *gin.Engine) {
         fileGroup.GET("/storage_usage", file.StorageUsageHandler)
 
         fileGroup.POST("/upload", file.UploadHandler)
+        fileGroup.POST("/upload_binary", file.UploadBinaryHandler)
         fileGroup.POST("/download", file.DownloadHandler)
 
     }

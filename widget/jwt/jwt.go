@@ -20,14 +20,20 @@ package jwt
 
 
 import (
-    "FileServerWeb/config"
     "errors"
+    "strings"
+    "time"
 
     "github.com/golang-jwt/jwt/v5"
 
-    "strings"
-    "time"
+    "FileServerWeb/config"
+    "FileServerWeb/db"
+	L "FileServerWeb/widget/logger"
 )
+
+
+var DB = db.DB
+
 
 type Claims struct {
     UUID string `json:"uuid"`
@@ -35,10 +41,10 @@ type Claims struct {
 }
 
 
-func GenerateToken(username string) (string, error) {
+func GenerateToken(uuid string) (string, error) {
     var current = time.Now()
     var claim = Claims{
-        username,
+        uuid,
         jwt.RegisteredClaims{
             ExpiresAt: jwt.NewNumericDate(current.Add(3 * time.Hour)), // 过期时间3小时
             IssuedAt:  jwt.NewNumericDate(current), // 签发时间
@@ -46,8 +52,21 @@ func GenerateToken(username string) (string, error) {
         },
     }
 
+	// 通过 UUID 查询 SecretKey
+	var user db.UserSecretKey
+
+	// 使用 Where 条件进行查询
+	result := DB.Where("uuid = ?", uuid).First(&user)
+    if result.Error != nil {
+        return "", result.Error
+    }
+
+
     var t = jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
-    var s, err = t.SignedString(config.SECRET_KEY)
+    // 必须传[]byte类型
+    var s, err = t.SignedString([]byte(config.SECRET_KEY + user.SecretKey))
+    L.Logger.Info(config.SECRET_KEY + user.SecretKey)
+
 
     return "Bearer " + s, err
 }
@@ -63,11 +82,37 @@ func ParseToken(s string) (*Claims, error) {
         return nil, errors.New("Wrong format")
     }
 
+    // var t, err = jwt.ParseWithClaims(
+    //     res[1],
+    //     &Claims{},
+    //     func(token *jwt.Token) (interface{}, error) {
+    //         return []byte(config.SECRET_KEY), nil
+    //     // func(token *jwt.Token) (interface{}, error) {
+    //     //     return config.SECRET_KEY, nil
+    // })
+
+
+    // 解析 Token 字符串
     var t, err = jwt.ParseWithClaims(
         res[1],
         &Claims{},
         func(token *jwt.Token) (interface{}, error) {
-            return []byte(config.SECRET_KEY), nil
+            // 获取 Token 中的 UUID
+            claims, ok := token.Claims.(*Claims)
+            if !ok {
+                return nil, errors.New("Failed to parse claims")
+            }
+            uuid := claims.UUID
+
+            // 通过 UUID 查询 SecretKey
+            var user db.UserSecretKey
+            result := DB.Where("uuid = ?", uuid).First(&user)
+            if result.Error != nil {
+                return "", result.Error
+            }
+
+            // 返回用户密钥用于验证 Token 的签名
+            return []byte(config.SECRET_KEY + user.SecretKey), nil
     })
 
     var claims, ok = t.Claims.(*Claims)

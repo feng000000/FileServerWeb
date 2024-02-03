@@ -13,7 +13,8 @@ var (
     USER_FILE_PATH      string
     LOG_FILE_PATH       string
     CODE_FILE_PATH      string
-    SECRET_KEY          []byte
+    // SECRET_KEY          []byte
+    SECRET_KEY          string
     DB_USERNAME         string
     DB_PASSWORD         string
     DB_ADDR             string
@@ -34,7 +35,7 @@ func init() {
     }
 
     HOME_DIR    = config.Get("HOME_DIR").(string)
-    SECRET_KEY  = []byte(config.Get("SECRET_KEY").(string))
+    SECRET_KEY  = config.Get("SECRET_KEY").(string)
 
     // FILE
     USER_FILE_PATH  = parsePath(config.Get("FILE.USER_FILE_PATH").(string))

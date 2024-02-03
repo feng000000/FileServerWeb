@@ -37,6 +37,7 @@ func init() {
         &User{},
         &File{},
         &LevelStorge{},
+        &UserSecretKey{},
     )
 
     // 预添加数据
