@@ -3,5 +3,5 @@ test/
 config.toml
 test*
 
-data/user_files/*
 !data/user_files/
+data/user_files/*
