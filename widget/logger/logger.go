@@ -23,12 +23,12 @@ func init() {
         EncodeCaller: zapcore.ShortCallerEncoder,
     }
 
-	// 创建目录，如果不存在的话
-	err := os.MkdirAll(filepath.Dir(config.LOG_FILE_PATH), os.ModePerm)
-	if err != nil {
-		fmt.Println("Error creating directory:", err)
-		return
-	}
+    // 创建目录，如果不存在的话
+    err := os.MkdirAll(filepath.Dir(config.LOG_FILE_PATH), os.ModePerm)
+    if err != nil {
+        fmt.Println("Error creating directory:", err)
+        return
+    }
 
     file, err := os.Create(config.LOG_FILE_PATH)
     if err != nil {

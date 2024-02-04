@@ -1,21 +1,23 @@
 package auth
 
 import (
-	// "fmt"
-	"bufio"
-	"errors"
-	"net/http"
-	"os"
-	"strings"
+    // "fmt"
+    "bufio"
+    "errors"
+    "net/http"
+    "os"
+    "strings"
+    "crypto/rand"
+    "encoding/hex"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+    "github.com/gin-gonic/gin"
+    "github.com/google/uuid"
 
-	"FileServerWeb/db"
-	"FileServerWeb/config"
-	"FileServerWeb/widget/jwt"
-	L "FileServerWeb/widget/logger"
-	R "FileServerWeb/widget/response"
+    "FileServerWeb/db"
+    "FileServerWeb/config"
+    "FileServerWeb/widget/jwt"
+    L "FileServerWeb/widget/logger"
+    R "FileServerWeb/widget/response"
 )
 
 
@@ -131,11 +133,18 @@ func RegisterHandler(c *gin.Context) {
         return
     }
 
+    // UserSecretKey
+    if _, err := generateNewUserSecretKey(user.UUID); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "InternalServerError",
+        })
+        return
+    }
+
     c.JSON(http.StatusOK, R.Success(R.Json{"token": ret_token}))
     return
 }
 
-// ---------------- tool func ---------------- //
 
 func checkActivationCode(code string) (map[string]bool, bool) {
     var err error
@@ -203,4 +212,38 @@ func useActivationCode(codes map[string]bool, code string) bool {
         }
     }
     return true
+}
+
+
+// length 为字节数, 生成的 key 长度为 length*2
+func genKey(key *string, length int) (error) {
+    bytes := make([]byte, length)
+    _, err := rand.Read(bytes)
+    if err != nil {
+        return err
+    }
+
+    *key = hex.EncodeToString(bytes)
+    return nil
+}
+
+
+func generateNewUserSecretKey(uuid string) (string, error) {
+    var user db.UserSecretKey
+
+    result := DB.Where("uuid = ?", uuid).First(&user)
+    if result.Error != nil {
+        return "", result.Error
+    }
+
+    if err := genKey(&user.SecretKey, 64); err != nil {
+        return "", err
+    }
+
+    // 保存修改后的记录
+    if err := DB.Save(&user).Error; err != nil {
+        return "", err
+    }
+
+    return user.SecretKey, nil
 }

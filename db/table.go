@@ -1,7 +1,7 @@
 package db
 
 import (
-	"time"
+    "time"
 )
 
 
@@ -36,6 +36,6 @@ type File struct {
 }
 
 type LevelStorge struct {
-    Level       int8        `json:"level" gorm:"primaryKey;autoIncrement:false"`
-    StorgeLimit int64       `json:"storge_limit"` // 单位kB
+    Level       int8    `json:"level" gorm:"primaryKey;autoIncrement:false"`
+    StorgeLimit int64   `json:"storge_limit"` // 单位kB
 }

@@ -28,7 +28,7 @@ import (
 
     "FileServerWeb/config"
     "FileServerWeb/db"
-	L "FileServerWeb/widget/logger"
+    L "FileServerWeb/widget/logger"
 )
 
 
@@ -52,11 +52,11 @@ func GenerateToken(uuid string) (string, error) {
         },
     }
 
-	// 通过 UUID 查询 SecretKey
-	var user db.UserSecretKey
+    // 通过 UUID 查询 SecretKey
+    var user db.UserSecretKey
 
-	// 使用 Where 条件进行查询
-	result := DB.Where("uuid = ?", uuid).First(&user)
+    // 使用 Where 条件进行查询
+    result := DB.Where("uuid = ?", uuid).First(&user)
     if result.Error != nil {
         return "", result.Error
     }
