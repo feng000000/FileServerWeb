@@ -7,9 +7,9 @@ import (
     "FileServerWeb/middleware"
     "FileServerWeb/views"
     "FileServerWeb/views/admin"
-    "FileServerWeb/views/auth"
+    "FileServerWeb/views/authentication"
     "FileServerWeb/views/file"
-    "FileServerWeb/views/user"
+    "FileServerWeb/views/userSettings"
 )
 
 func Routers(engine *gin.Engine) {
@@ -19,18 +19,20 @@ func Routers(engine *gin.Engine) {
     // auth
     var authGroup = engine.Group("/auth")
     {
-        authGroup.POST("/login", auth.LoginHandler)
-        authGroup.POST("/register", auth.RegisterHandler)
+        authGroup.POST("/login", authentication.LoginHandler)
+        authGroup.POST("/register", authentication.RegisterHandler)
     }
 
     // user
     var userGroup = engine.Group(
-        "/user",
+        "/user_settings",
         middleware.JWTMiddleware(),
     )
     {
-        userGroup.POST("/change_username", user.ChangeUsernameHandler)
-        userGroup.POST("/change_password", user.ChangePasswordHandler)
+        userGroup.POST("/change_username",
+                       userSettings.ChangeUsernameHandler)
+        userGroup.POST("/change_password",
+                       userSettings.ChangePasswordHandler)
     }
 
     // file

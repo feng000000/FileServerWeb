@@ -37,6 +37,7 @@ func init() {
 
     core := zapcore.NewCore(
         zapcore.NewJSONEncoder(encoderConfig),
+        // zapcore.NewConsoleEncoder(encoderConfig),
         zapcore.AddSync(file),
         zap.NewAtomicLevelAt(zap.InfoLevel),
     )

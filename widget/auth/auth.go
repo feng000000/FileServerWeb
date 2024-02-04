@@ -16,19 +16,20 @@
 // }
 // fmt.Printf("claim: %+v\n", claim)
 // fmt.Println("username: ", claim.Username)
-package jwt
+package auth
 
 
 import (
     "errors"
     "strings"
     "time"
+    "crypto/rand"
+    "encoding/hex"
 
     "github.com/golang-jwt/jwt/v5"
 
     "FileServerWeb/config"
     "FileServerWeb/db"
-    L "FileServerWeb/widget/logger"
 )
 
 
@@ -65,8 +66,6 @@ func GenerateToken(uuid string) (string, error) {
     var t = jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
     // 必须传[]byte类型
     var s, err = t.SignedString([]byte(config.SECRET_KEY + user.SecretKey))
-    L.Logger.Info(config.SECRET_KEY + user.SecretKey)
-
 
     return "Bearer " + s, err
 }
@@ -121,4 +120,39 @@ func ParseToken(s string) (*Claims, error) {
     } else {
         return nil, err
     }
+}
+
+
+
+// length 为字节数, 生成的 key 长度为 length*2
+func genKey(key *string, length int) (error) {
+    bytes := make([]byte, length)
+    _, err := rand.Read(bytes)
+    if err != nil {
+        return err
+    }
+
+    *key = hex.EncodeToString(bytes)
+    return nil
+}
+
+
+func GenerateNewUserSecretKey(uuid string) (string, error) {
+    var user db.UserSecretKey
+
+    result := DB.Where("uuid = ?", uuid).First(&user)
+    if result.Error != nil {
+        return "", result.Error
+    }
+
+    if err := genKey(&user.SecretKey, 64); err != nil {
+        return "", err
+    }
+
+    // 保存修改后的记录
+    if err := DB.Save(&user).Error; err != nil {
+        return "", err
+    }
+
+    return user.SecretKey, nil
 }

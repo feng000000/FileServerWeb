@@ -1,4 +1,4 @@
-package auth
+package authentication
 
 import (
     // "fmt"
@@ -7,15 +7,13 @@ import (
     "net/http"
     "os"
     "strings"
-    "crypto/rand"
-    "encoding/hex"
 
     "github.com/gin-gonic/gin"
     "github.com/google/uuid"
 
     "FileServerWeb/db"
     "FileServerWeb/config"
-    "FileServerWeb/widget/jwt"
+    "FileServerWeb/widget/auth"
     L "FileServerWeb/widget/logger"
     R "FileServerWeb/widget/response"
 )
@@ -30,7 +28,7 @@ func LoginHandler(c *gin.Context) {
     var token = c.GetHeader("Authorization")
 
     if token != "" {
-        _, err = jwt.ParseToken(token)
+        _, err = auth.ParseToken(token)
         if err == nil {
             c.JSON(http.StatusOK, R.Success(nil))
             return
@@ -67,7 +65,7 @@ func LoginHandler(c *gin.Context) {
     }
 
     var ret_token string
-    ret_token, err = jwt.GenerateToken(user.UUID)
+    ret_token, err = auth.GenerateToken(user.UUID)
     if err != nil {
         L.Logger.Error(err.Error())
         c.JSON(http.StatusInternalServerError, R.InternalServerError(nil))
@@ -115,7 +113,7 @@ func RegisterHandler(c *gin.Context) {
     DB.Create(&user)
 
     var ret_token string
-    ret_token, err = jwt.GenerateToken(param.Username)
+    ret_token, err = auth.GenerateToken(param.Username)
     if err != nil {
         L.Logger.Error(err.Error())
         c.JSON(http.StatusInternalServerError, gin.H{
@@ -134,7 +132,7 @@ func RegisterHandler(c *gin.Context) {
     }
 
     // UserSecretKey
-    if _, err := generateNewUserSecretKey(user.UUID); err != nil {
+    if _, err := auth.GenerateNewUserSecretKey(user.UUID); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{
             "message": "InternalServerError",
         })
@@ -212,38 +210,4 @@ func useActivationCode(codes map[string]bool, code string) bool {
         }
     }
     return true
-}
-
-
-// length 为字节数, 生成的 key 长度为 length*2
-func genKey(key *string, length int) (error) {
-    bytes := make([]byte, length)
-    _, err := rand.Read(bytes)
-    if err != nil {
-        return err
-    }
-
-    *key = hex.EncodeToString(bytes)
-    return nil
-}
-
-
-func generateNewUserSecretKey(uuid string) (string, error) {
-    var user db.UserSecretKey
-
-    result := DB.Where("uuid = ?", uuid).First(&user)
-    if result.Error != nil {
-        return "", result.Error
-    }
-
-    if err := genKey(&user.SecretKey, 64); err != nil {
-        return "", err
-    }
-
-    // 保存修改后的记录
-    if err := DB.Save(&user).Error; err != nil {
-        return "", err
-    }
-
-    return user.SecretKey, nil
 }

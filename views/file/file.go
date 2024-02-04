@@ -100,7 +100,6 @@ func UploadHandler(c *gin.Context) {
 
         var dst = filepath.Join(config.USER_FILE_PATH, UUID, theFileName)
 
-        // TODO: 压缩后再存储
         go c.SaveUploadedFile(file, dst)
     }
 

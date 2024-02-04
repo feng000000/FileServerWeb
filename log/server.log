@@ -1,0 +1,1 @@
+{"lv":"INFO","time":"2024-02-04T15:47:37.733+0800","caller":"zap@v0.2.0/zap.go:91","msg":"/auth/login","status":200,"method":"POST","path":"/auth/login","query":"","ip":"127.0.0.1","user-agent":"PostmanRuntime/7.36.1","latency":1410654,"time":"2024-02-04T15:47:37+08:00"}

@@ -1,4 +1,4 @@
-package user
+package userSettings
 
 import (
     "net/http"
@@ -6,6 +6,7 @@ import (
     "github.com/gin-gonic/gin"
 
     "FileServerWeb/db"
+    "FileServerWeb/widget/auth"
     L "FileServerWeb/widget/logger"
     R "FileServerWeb/widget/response"
 )
@@ -83,6 +84,12 @@ func ChangePasswordHandler(c *gin.Context) {
     } else if result.Error != nil {
         L.Logger.Error(result.Error.Error())
         c.JSON(http.StatusInternalServerError, R.DatabaseError(nil))
+        return
+    }
+
+    if _, err := auth.GenerateNewUserSecretKey(UUID); err != nil {
+        L.Logger.Error(result.Error.Error())
+        c.JSON(http.StatusInternalServerError, R.InternalServerError(nil))
         return
     }
 

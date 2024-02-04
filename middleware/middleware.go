@@ -5,7 +5,7 @@ import (
 
     "github.com/gin-gonic/gin"
 
-    "FileServerWeb/widget/jwt"
+    "FileServerWeb/widget/auth"
     R "FileServerWeb/widget/response"
 )
 
@@ -15,27 +15,26 @@ func JWTMiddleware() gin.HandlerFunc {
     return func(c *gin.Context) {
         var err error
         var token = c.GetHeader("Authorization")
-        var claims *jwt.Claims
+        var claims *auth.Claims
 
-        if token != "" {
-            claims, err = jwt.ParseToken(token)
-            if err != nil {
-                c.AbortWithStatusJSON(
-                    http.StatusUnauthorized,
-                    R.Unauthorized(nil),
-                )
-                return
-            }
+        if token == "" {
+            c.AbortWithStatusJSON(
+                http.StatusUnauthorized,
+                R.Unauthorized(nil),
+            )
+            return
+        }
+
+        claims, err = auth.ParseToken(token)
+        if err != nil {
+            c.AbortWithStatusJSON(
+                http.StatusUnauthorized,
+                R.Unauthorized(nil),
+            )
+            return
         }
 
         c.Set("UUID", claims.UUID)
         return
-    }
-}
-
-
-func LoggerMiddleWare() gin.HandlerFunc {
-    return func(c *gin.Context) {
-        // TODO
     }
 }
