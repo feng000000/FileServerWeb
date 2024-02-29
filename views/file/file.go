@@ -238,7 +238,7 @@ func getStorgeUsage(UUID string) (int64, error) {
     var totalSize int64
     var files []db.File
 
-    result := DB.Where("uuid = ?", "UUID").Find(&files)
+    result := DB.Where("uuid = ?", UUID).Find(&files)
     if result.Error != nil {
         return 0, result.Error
     }
