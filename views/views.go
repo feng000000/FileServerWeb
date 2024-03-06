@@ -13,8 +13,16 @@ func Ping(c *gin.Context) {
 }
 
 func IP(c *gin.Context) {
-    // TODO: 配置nginx后, 获取 headers 中 X-Real-IP 字段的值
+    var ip string
+    ip = c.Request.Header.Get("X-Real-IP")
+    if ip == "127.0.0.1" || ip == "" {
+        ip = c.Request.Header.Get("X-Forwarded-For")
+    }
+    if ip == "" {
+        ip = "127.0.0.1"
+    }
+
     c.JSON(http.StatusOK, gin.H{
-        "ip": c.ClientIP(),
+        "ip": ip,
     })
 }
