@@ -1,0 +1,21 @@
+HOME_DIR    = "/home/feng/Code/FileServerWeb"
+SECRET_KEY  = "test1234"
+
+DEBUG       = false
+
+[DATABASE]
+USERNAME    = "root"
+PASSWORD    = "123456"
+ADDR        = "127.0.0.1:3306"
+DB_NAME     = "fileserver"
+
+[FILE]
+CODE_FILE_PATH          = "activation_code.txt"
+LOG_FILE_PATH     = "log/server.log"
+USER_FILE_PATH          = "data/user_files"
+
+[EMAIL]
+SMTP_SERVER = "smtp.163.com"
+SMTP_PORT   = 465
+USERNAME    = "flfeng0@163.com"
+PASSWORD    = "FWCFGXHUOVYXGYNV"
